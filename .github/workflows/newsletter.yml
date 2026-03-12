@@ -19,6 +19,9 @@ on:
         type: choice
         options: ['false', 'true']
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   newsletter:
     runs-on: ubuntu-latest
@@ -41,7 +44,7 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GIST_ID: ${{ secrets.GIST_ID }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
           SMTP_HOST: smtp.gmail.com
           SMTP_PORT: '587'
           SMTP_USER: ${{ secrets.SMTP_USER }}
