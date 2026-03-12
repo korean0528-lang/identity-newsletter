@@ -39,6 +39,10 @@ class TossCrawler(BaseCrawler):
                 if not title:
                     continue
 
+                # 댓글/감사 문구처럼 보이는 제목은 제외
+                if _is_comment_like(title):
+                    continue
+
                 candidates.append((title, url))
 
             for i, (title, url) in enumerate(candidates):
@@ -59,6 +63,19 @@ class TossCrawler(BaseCrawler):
             print(f"  [Toss] Scraping error: {e}")
 
         return articles
+
+
+_COMMENT_MARKERS = ["고맙습니다", "감사합니다", "도움 받았습니다", "잘 읽었습니다"]
+
+
+def _is_comment_like(title: str) -> bool:
+    """독자 댓글이나 감사 문구처럼 보이는 제목을 걸러낸다."""
+    if "\n" in title and len(title) > 40:
+        return True
+    for marker in _COMMENT_MARKERS:
+        if marker in title:
+            return True
+    return False
 
 
 def _fetch_article_body(url: str) -> str:

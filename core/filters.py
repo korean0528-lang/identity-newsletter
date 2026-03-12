@@ -1,9 +1,16 @@
+import re
 from crawlers.base import Article
 
-KEYWORDS = [
+# 단어 경계가 필요한 키워드 (부분 문자열 오탐 방지)
+WORD_BOUNDARY_KEYWORDS = [
+    "passkey", "fido", "webauthn", "oauth", "sso",
+    "openid", "pkce", "2fa", "mfa",
+]
+
+# 부분 포함으로 매칭하는 키워드
+SUBSTRING_KEYWORDS = [
     # Authentication / Login
-    "passkey", "fido", "webauthn", "oauth", "sso", "sign in with",
-    "social login", "openid", "pkce", "biometric", "2fa", "mfa",
+    "sign in with", "social login", "biometric",
     "two-factor", "multi-factor", "authentication", "sign-on",
     "login", "sign-in", "sign in", "passwordless",
     # Privacy / Security
@@ -32,4 +39,12 @@ def filter_articles(articles: list[Article]) -> list[Article]:
 
 def _find_keywords(text: str) -> list[str]:
     lower = text.lower()
-    return [kw for kw in KEYWORDS if kw in lower]
+    found = []
+    for kw in WORD_BOUNDARY_KEYWORDS:
+        pattern = r"\b" + re.escape(kw) + r"\b"
+        if re.search(pattern, lower):
+            found.append(kw)
+    for kw in SUBSTRING_KEYWORDS:
+        if kw in lower:
+            found.append(kw)
+    return found
