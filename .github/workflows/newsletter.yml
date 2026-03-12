@@ -2,8 +2,8 @@ name: Identity Tech Newsletter
 
 on:
   schedule:
-    # 평일 09:00 KST = UTC 00:00 (월~금)
-    - cron: '0 0 * * 1-5'
+    # 매일 09:00 KST = UTC 00:00
+    - cron: '0 0 * * *'
   workflow_dispatch:
     inputs:
       dry_run:
