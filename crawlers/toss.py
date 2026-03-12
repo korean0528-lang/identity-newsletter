@@ -1,4 +1,5 @@
 import re
+import time
 import requests
 from bs4 import BeautifulSoup
 from .base import Article, BaseCrawler, HEADERS
@@ -23,6 +24,7 @@ class TossCrawler(BaseCrawler):
             resp.raise_for_status()
             soup = BeautifulSoup(resp.text, "html.parser")
 
+            candidates = []
             for a in soup.find_all("a", href=ARTICLE_PATTERN):
                 href = a["href"]
                 url = BASE_URL + href
@@ -30,20 +32,17 @@ class TossCrawler(BaseCrawler):
                     continue
                 seen.add(url)
 
-                # Title is stored in data attribute; excerpt in the last div
                 title = a.get("data-log-item_title", "").strip()
                 if not title:
-                    # fallback: longest text node > 10 chars
                     lines = [t.strip() for t in a.stripped_strings]
                     title = next((l for l in lines if len(l) > 10), "")
                 if not title:
                     continue
 
-                # Excerpt lives in the last content div (class ending in b8)
-                divs = a.find_all("div")
-                desc_div = divs[-1] if divs else None
-                summary = desc_div.get_text(strip=True)[:500] if desc_div else title
+                candidates.append((title, url))
 
+            for i, (title, url) in enumerate(candidates):
+                summary = _fetch_article_body(url)
                 articles.append(Article(
                     id=url,
                     source=self.source_name,
@@ -53,7 +52,44 @@ class TossCrawler(BaseCrawler):
                     language=self.language,
                     published="",
                 ))
+                if i < len(candidates) - 1:
+                    time.sleep(0.3)
+
         except Exception as e:
             print(f"  [Toss] Scraping error: {e}")
 
         return articles
+
+
+def _fetch_article_body(url: str) -> str:
+    """Fetch a Toss article page and return body text (up to 2000 chars)."""
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=20)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "html.parser")
+
+        # Try common article body selectors for Next.js sites
+        for selector in [
+            "article",
+            "div.article-content",
+            "div.post-content",
+            "div[class*='content']",
+            "main",
+        ]:
+            body = soup.select_one(selector)
+            if body:
+                text = body.get_text(separator=" ", strip=True)
+                if len(text) > 100:
+                    return text[:2000]
+
+        # Fallback: all paragraphs
+        paragraphs = soup.select("p")
+        if paragraphs:
+            text = " ".join(p.get_text(strip=True) for p in paragraphs)
+            if len(text) > 50:
+                return text[:2000]
+
+    except Exception as e:
+        print(f"  [Toss] Body fetch error for {url}: {e}")
+
+    return ""
